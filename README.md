@@ -2,7 +2,7 @@
 
 Performs FSL's `dual_regression` for CIFTI files in addition to permutation based analyses (via FSL's PALM).
 
-This script requires that `FSL`, connectome workbench (`wb_command`), and FSL's PALM be installed and added to the system path for this script to work correctly.
+This script requires that `FSL`, connectome workbench (`wb_command`), FSL's PALM, and GNU `parallel` to be installed and added to the system path for this script to work correctly.
 
 **Note**:
   * Intended to run on LSF platforms (i.e. jobs for PALM are submitted via `bsub` to run in parallel).
