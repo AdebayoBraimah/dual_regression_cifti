@@ -551,7 +551,7 @@ fi
 
 # Surface templates
 if [[ ! -z ${atlas_dir} ]]; then
-  cp -r ${atlas_dir} ${OUTPUT}/surf.templates
+  cp -r ${atlas_dir}/ ${OUTPUT}/surf.templates
   atlas_dir=${OUTPUT}/surf.templates
   template_surf_L=$(ls ${atlas_dir}/*L*midthick*surf.gii)
   template_surf_R=$(ls ${atlas_dir}/*R*midthick*surf.gii)
