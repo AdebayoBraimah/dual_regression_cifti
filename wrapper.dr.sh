@@ -41,7 +41,7 @@ export PATH=${PATH}:${PALMDIR}
 echo ""
 echo "Performing Analysis"
 echo ""
-ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.2/ciftis/ROIs.dscalar.nii
+ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
 jobs=10
 perm=5000
 design=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.mat

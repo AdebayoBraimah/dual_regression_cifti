@@ -87,6 +87,12 @@ NOTE:
   added to system path
 - Default LSF arguements are unlikely to result 
   in all PALM jobs running to completion.
+- Output statistics files from PALM are automatically
+  thresholded.
+    - In the case the the '--two-tail' option is used
+      but neither the '--log-p' or '--save1-p' option 
+      is used, then the output statistics files will only
+      show one-tail (due to hardcoded settings)
 
 ----------------------------------------
 
@@ -228,7 +234,9 @@ scale_palette(){
   local filename=$(basename ${file})
   local name=${RANDOM}_${filename}
 
-  wb_command -cifti-palette ${file} MODE_AUTO_SCALE ${dir}/${name} -neg-user 0 0 -thresholding THRESHOLD_TYPE_NORMAL THRESHOLD_TEST_SHOW_OUTSIDE ${min} ${max}
+  # wb_command -cifti-palette ${file} MODE_AUTO_SCALE ${dir}/${name} -neg-user 0 0 -thresholding THRESHOLD_TYPE_NORMAL THRESHOLD_TEST_SHOW_OUTSIDE ${min} ${max}
+  wb_command -cifti-palette ${file} MODE_AUTO_SCALE ${dir}/${name} -thresholding THRESHOLD_TYPE_NORMAL THRESHOLD_TEST_SHOW_OUTSIDE ${min} ${max}
+
   mv ${dir}/${name} ${file}
 }
 
@@ -994,10 +1002,12 @@ fi
 if [[ ${save1_p} = "true" ]]; then
   max_thresh=$(${scripts_dir}/calc_thresh.py --alpha ${sig} --tests 3 --method ${method})
   max_thresh=$(python -c "print(1-${max_thresh})")
-  min_thresh=0
+  # min_thresh=0
+  min_thresh="-${max_thresh}"
 elif [[ ${log_p} = "true" ]]; then
   max_thresh=$(${scripts_dir}/calc_thresh.py --alpha ${sig} --tests 3 --method ${method} --log)
-  min_thresh=0
+  # min_thresh=0
+  min_thresh="-${max_thresh}"
 else
   min_thresh=$(${scripts_dir}/calc_thresh.py --alpha ${sig} --tests 3 --method ${method})
   max_thresh=1
