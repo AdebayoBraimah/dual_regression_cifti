@@ -74,6 +74,7 @@ LSF specific arguements:
 --mem, --memory               The amount of memory to be used when submitting jobs for PALM (in MB) [default: 5000]
 --wall                        The amount of wall-time to be allocated to each job for PALM (in hours) [default: 100]
 -q, --queue                   LSF queue name to submit jobs to (, look up queue names with the command 'bqueues') [default: normal]
+--resub                       Re-submit LSF jobs in the case of initial job failure [default: false]
 
 ----------------------------------------
 
@@ -294,6 +295,7 @@ method=bonf
 wall=100
 mem=5000
 queue=normal
+resub=false
 
 # Parse options
 while [[ ${#} -gt 0 ]]; do
@@ -325,6 +327,7 @@ while [[ ${#} -gt 0 ]]; do
     --method) shift; method=${1} ;;
     --mem|--memory) shift; mem=${1} ;;
     --wall) shift; wall=${1} ;;
+    --resub) resub=true ;;
     -q|--queue) shift; queue=${1} ;;
     -h|-help|--help) Usage; ;;
     -*) echo_red "$(basename ${0}): Unrecognized option ${1}" >&2; Usage; ;;
@@ -551,7 +554,7 @@ fi
 
 # Surface templates
 if [[ ! -z ${atlas_dir} ]]; then
-  cp -r ${atlas_dir}/ ${OUTPUT}/surf.templates
+  cp -r ${atlas_dir}/ ${OUTPUT}/surf.templates/
   atlas_dir=${OUTPUT}/surf.templates
   template_surf_L=$(ls ${atlas_dir}/*L*midthick*surf.gii)
   template_surf_R=$(ls ${atlas_dir}/*R*midthick*surf.gii)
@@ -830,6 +833,10 @@ if [[ ! -z ${queue} ]]; then
   # if [[ ${queue} = *"gpu"* ]]; then
   #   job_cmds+="-R \"rusage[gpu=1]\" "
   # fi
+fi
+
+if [[ ${resub} = "true" ]]; then
+  job_cmds+="-r "
 fi
 
 # Submit jobs for each IC map PALM analysis
