@@ -68,6 +68,7 @@ PALM specific arguements:
 --sig                         Significance threshold for statistical thresholding [default: 0.05]
 --method                      Method used for determining corrected cifti-stat threshold. 
                               Valid options include: Bonferroni ('bonf') and Šidák ('sid') [default: bonf]
+--precision                   Precision for input files ('single' or 'double')
 
 LSF specific arguements:
 
@@ -81,8 +82,9 @@ LSF specific arguements:
 -h,-help,--help     Prints usage and exits.
 
 NOTE:
+- Requires bash v4.0+
 - Requires FSL v5.0.11+
-- Requires Connectome Workbench v1.3.2+
+- Requires Connectome Workbench v1.2.0+
 - Requires FSL's PALM version alpha115+
 - Requires GNU parallel to be installed and
   added to system path
@@ -90,10 +92,10 @@ NOTE:
   in all PALM jobs running to completion.
 - Output statistics files from PALM are automatically
   thresholded.
-    - In the case the the '--two-tail' option is used
+    - In the case that the '--two-tail' option is used
       but neither the '--log-p' or '--save1-p' option 
       is used, then the output statistics files will only
-      show one-tail (due to hardcoded settings)
+      show one-tailed results (due to hardcoded settings)
 
 ----------------------------------------
 
@@ -290,6 +292,7 @@ demean=false
 stat_cleanup=true
 sig=0.05
 method=bonf
+precis=""
 
 # LSF defaults
 wall=100
@@ -323,6 +326,7 @@ while [[ ${#} -gt 0 ]]; do
     --demean) demean=true ;;
     --convert-all) convert_all=true ;;
     --no-stats-cleanup) stat_cleanup=false ;;
+    --precision) shift; precis=${1} ;;
     --sig) shift; sig=${1} ;;
     --method) shift; method=${1} ;;
     --mem|--memory) shift; mem=${1} ;;
@@ -351,12 +355,14 @@ if ! hash wb_command 2>/dev/null; then
 fi
 
 if ! hash matlab 2>/dev/null; then
-  echo_red "MATLAB is not installed or added to the system path. Please check. Exiting..."
-  exit 1
+  if ! hash octave 2>/dev/null; then
+    echo_red "Neither MATLAB nor Octave is installed or added to the system path. Please check. Exiting..."
+    exit 1
+  fi
 fi
 
 if ! hash palm 2>/dev/null; then
-  echo_red "FSL's PALM is not added to the system path. Please check. Exiting..."
+  echo_red "FSL's PALM is not added to the system path or configured correctly. Please check. Exiting..."
   exit 1
 fi
 
@@ -447,6 +453,12 @@ if [[ ! -z ${NPERM} ]]; then
  if ! [[ "${NPERM}" =~ ^[0-9]+$ ]]; then
           echo_red "Input Error: Number of permutations requires integers only [1-9999999]"
           exit 1
+  fi
+fi
+
+if [[ ! -z ${precis} ]]; then
+  if [[ ${precis,,} != "single" ]] || [[ ${precis,,} != "double" ]]; then
+    echo_red "PALM Input Error: Invalid precision option - valid options include: 'single' or 'double'. Exiting..."
   fi
 fi
 
@@ -554,6 +566,7 @@ fi
 
 # Surface templates
 if [[ ! -z ${atlas_dir} ]]; then
+  rm -rf ${OUTPUT}/surf.templates
   cp -r ${atlas_dir}/ ${OUTPUT}/surf.templates/
   atlas_dir=${OUTPUT}/surf.templates
   template_surf_L=$(ls ${atlas_dir}/*L*midthick*surf.gii)
@@ -563,6 +576,12 @@ elif [[ -z ${atlas_dir} ]]; then
     surf_L_base=$(basename ${template_surf_L}); cp ${template_surf_L} ${OUTPUT}/${surf_L_base}; template_surf_L=${OUTPUT}/${surf_L_base}
     surf_R_base=$(basename ${template_surf_R}); cp ${template_surf_R} ${OUTPUT}/${surf_R_base}; template_surf_R=${OUTPUT}/${surf_R_base}
   fi
+fi
+
+# Internally uncompress gifti midthickness files if octave is being used
+if hash octave 2>/dev/null; then
+  wb_command -gifti-convert BASE64_BINARY ${template_surf_L} ${template_surf_L}
+  wb_command -gifti-convert BASE64_BINARY ${template_surf_R} ${template_surf_R}
 fi
 
 #
@@ -749,6 +768,12 @@ if [[ ${#dr_cii[@]} -eq 0 ]] && [[ ! -f ${OUTPUT}/ic_maps.dscalar.nii ]]; then
   -metric CORTEX_LEFT ${OUTPUT}/palm.mask/cort.L.mask.func.gii \
   -metric CORTEX_RIGHT ${OUTPUT}/palm.mask/cort.R.mask.func.gii
 
+  # Perform internal uncompression if octave is being used
+  if hash octave 2>/dev/null; then
+    wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/palm.mask/cort.L.mask.func.gii ${OUTPUT}/palm.mask/cort.L.mask.func.gii
+    wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${OUTPUT}/palm.mask/cort.R.mask.func.gii
+  fi
+
   cp ${ICA_MAPS_CIFTI} ${OUTPUT}/ic_maps.dscalar.nii
 fi
 
@@ -779,6 +804,10 @@ if [[ ! -z ${NPERM} ]]; then
   palm_cmds+="-n ${NPERM} "
 fi
 
+if [[ ! -z ${precis} ]]; then
+  palm_cmds+="-precision ${precis} "
+fi
+
 if [[ ${fdr} = "true" ]]; then
   palm_cmds+="-fdr "
 fi
@@ -799,17 +828,29 @@ if [[ ${demean} = "true" ]]; then
   palm_cmds+="-demean "
 fi
 
+# log file check
+if [[ -f ${LOGDIR}/dr.ciftiD ]]; then
+  rm ${LOGDIR}/dr.ciftiD
+fi
+
 # Write commands for each IC map
 Nics=$(wb_command -file-information ${ICA_MAPS_CIFTI} -only-number-of-maps)
 j=0
 while [ ${j} -lt ${Nics} ] ; do
   jj=$(${FSLDIR}/bin/zeropad ${j} 4)
 
+  # Internally uncompress gifti files if octave is being used
+  if hash octave 2>/dev/null; then
+    uncompress_cmd="wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.func.gii ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.func.gii ; \
+        wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii"
+  fi
+
   # Gzipped nifti support is not available in PALM - convert/separate into uncompressed nifti
   echo "mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/vol ; mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L ; mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R ; \
         wb_command -cifti-separate ${OUTPUT}/dr_stage2_ic${jj}.dscalar.nii COLUMN -volume-all ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.nii \
         -metric CORTEX_LEFT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.func.gii \
-        -metric CORTEX_RIGHT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii" >> ${LOGDIR}/dr.ciftiD
+        -metric CORTEX_RIGHT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii ; \
+        ${uncompress_cmd}" >> ${LOGDIR}/dr.ciftiD
 
   j=$(echo "${j} 1 + p" | dc -)
 done
@@ -839,6 +880,11 @@ if [[ ${resub} = "true" ]]; then
   job_cmds+="-r "
 fi
 
+# log file check
+if [[ -f ${LOGDIR}/dr.PALM ]]; then
+  rm ${LOGDIR}/dr.PALM
+fi
+
 # Submit jobs for each IC map PALM analysis
 Nics=$(wb_command -file-information ${ICA_MAPS_CIFTI} -only-number-of-maps)
 j=0
@@ -856,10 +902,29 @@ while [ ${j} -lt ${Nics} ] ; do
     # Log args
     o_log=${OUTPUT}/dr_stage3_ic${jj}.palm/LSF
 
+    # Cannot submit large number of MATLAB jobs due to decreased availability of MATLAB licenses on LSF cluster
+
     # Run each job for PALM in parallel - this is faster
-    bsub -N ${job_cmds} -o ${o_log}_PALM_vol.log -e ${o_log}_PALM_vol.err -J ic${jj}_PALM.V -K ${PALM_CMD_vol} &
-    bsub -N ${job_cmds} -o ${o_log}_PALM_surfL.log -e ${o_log}_PALM_surfL.err -J ic${jj}_PALM.L -K ${PALM_CMD_surf_L} &
-    bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.log -e ${o_log}_PALM_surfR.err -J ic${jj}_PALM.R -K ${PALM_CMD_surf_R} &
+    # bsub -N ${job_cmds} -o ${o_log}_PALM_vol.log -e ${o_log}_PALM_vol.err -J ic${jj}_PALM.V -K ${PALM_CMD_vol} &
+    # bsub -N ${job_cmds} -o ${o_log}_PALM_surfL.log -e ${o_log}_PALM_surfL.err -J ic${jj}_PALM.L -K ${PALM_CMD_surf_L} &
+    # bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.log -e ${o_log}_PALM_surfR.err -J ic${jj}_PALM.R -K ${PALM_CMD_surf_R} &
+
+    # Run each job for PALM in parallel - this is faster
+    dr_palm_cii=""; dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls vol/*.nii) )
+    if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
+      bsub -N ${job_cmds} -o ${o_log}_PALM_vol.log -e ${o_log}_PALM_vol.err -J ic${jj}_PALM.V -K ${PALM_CMD_vol} &
+      echo "bsub -N ${job_cmds} -o ${o_log}_PALM_vol.log -e ${o_log}_PALM_vol.err -J ic${jj}_PALM.V -K ${PALM_CMD_vol}" >> ${LOGDIR}/dr.PALM
+    fi
+    dr_palm_cii=""; dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls cort.L/*.gii) )
+    if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
+      bsub -N ${job_cmds} -o ${o_log}_PALM_surfL.log -e ${o_log}_PALM_surfL.err -J ic${jj}_PALM.L -K ${PALM_CMD_surf_L} &
+      echo "bsub -N ${job_cmds} -o ${o_log}_PALM_surfL.log -e ${o_log}_PALM_surfL.err -J ic${jj}_PALM.L -K ${PALM_CMD_surf_L}" >> ${LOGDIR}/dr.PALM
+    fi
+    dr_palm_cii=""; dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls cort.R/*.gii) )
+    if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
+      bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.log -e ${o_log}_PALM_surfR.err -J ic${jj}_PALM.R -K ${PALM_CMD_surf_R} &
+      echo "bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.log -e ${o_log}_PALM_surfR.err -J ic${jj}_PALM.R -K ${PALM_CMD_surf_R}" >> ${LOGDIR}/dr.PALM
+    fi
   fi
   j=$(echo "${j} 1 + p" | dc -)
 done
@@ -909,9 +974,20 @@ for config in ${configs[@]}; do
   cp ${config} ${dir}/..
 done
 
+# Internally compress gifti midthickness files if octave was used
+if hash octave 2>/dev/null; then
+  wb_command -gifti-convert GZIP_BASE64_BINARY ${template_surf_L} ${template_surf_L}
+  wb_command -gifti-convert GZIP_BASE64_BINARY ${template_surf_R} ${template_surf_R}
+fi
+
 #
 # Gather output results and write specifications (spec) file
 #==============================================================================
+
+# log file check
+if [[ -f ${LOGDIR}/dr.ciftiE ]]; then
+  rm ${LOGDIR}/dr.ciftiE
+fi
 
 # Merge PALM results into single CIFTI dscalar
 Nics=$(wb_command -file-information ${ICA_MAPS_CIFTI} -only-number-of-maps)

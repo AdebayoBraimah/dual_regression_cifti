@@ -4,6 +4,17 @@
 # 
 # Test variables are commented out of code
 
+############################################################################################################################################
+# The problem seems to be that reading GIFTI needs some functions to be compiled for your platform. Could you try the following:
+
+# 1) Cd into palm-alpha106/fileio/@gifti/private
+
+# 2) Run:
+
+# mkoctfile --mex zstream.c
+# mkoctfile --mex miniz.c
+############################################################################################################################################
+
 ################################# Test Code #################################
 
 # Directory variables
@@ -31,6 +42,7 @@ out_dir_nonagg=${nonagg_dir}/seed-to-voxel.analysis
 module load dhcp/1.1.0-a        # This has wb_command installed
 module load fsl/5.0.11          # Current version that works reliably
 module load matlab/2017a        # This specific version as it is referenced in PALM LSF implementation
+# module load octave/3.8.2
 module load parallel/20140422   # Required for local compute node parallization of several jobs
 
 # Define PALM directory path and add PALM to system path
@@ -118,7 +130,7 @@ done
 echo ""
 echo "Performing dual regression of aggressively denoised data"
 echo ""
-bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --no-stats-cleanup
+bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --no-stats-cleanup --resub --precision double
 # echo ""
 # echo "Performing dual regression of non-aggressively denoised data"
 # echo ""
