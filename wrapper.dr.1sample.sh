@@ -36,14 +36,25 @@ nonagg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_nonagg.analy
 out_dir_agg=${agg_dir}/seed-to-voxel.analysis
 out_dir_nonagg=${nonagg_dir}/seed-to-voxel.analysis
 
+# source binaries from home directory
+source ~/.bash_profile
+
+# unload auto-loaded modules
+module unload fsl/5.0.11
+
 # Load modules
-# module load fsl/6.0.0         # May or may not work reliably (contains library linker issues)
+module load fsl/6.0.3         # May or may not work reliably (contains library linker issues)
 # module load fsl/6.0.0-2       # May contain library linker issues
-module load dhcp/1.1.0-a        # This has wb_command installed
-module load fsl/5.0.11          # Current version that works reliably
-module load matlab/2017a        # This specific version as it is referenced in PALM LSF implementation
+# module load dhcp/1.1.0-a        # This has wb_command installed
+# module load fsl/5.0.11          # Current version that works reliably
+# module load matlab/2017a        # This specific version as it is referenced in PALM LSF implementation
 # module load octave/3.8.2
+module load octave/5.2.0
 module load parallel/20140422   # Required for local compute node parallization of several jobs
+# module load palm/a117
+
+echo ""
+echo $FSLDIR
 
 # Define PALM directory path and add PALM to system path
 PALMDIR=${scripts_dir}/palm-alpha116

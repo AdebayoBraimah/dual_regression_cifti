@@ -636,6 +636,15 @@ if [[ ! -d ${OUTPUT}/subs.fake_nifti ]] && [[ ${#dr_cii[@]} -eq 0 ]]; then
 
   # Intermediary cleanup
   rm -rf ${OUTPUT}/subs.L.va ${OUTPUT}/subs.R.va ${OUTPUT}/midthickness_va.L.func.gii ${OUTPUT}/midthickness_va.R.func.gii
+
+else
+  # Check to see if vertex area files have been created
+  left_va=${OUTPUT}/mean_va.L.area.func.gii; right_va=${OUTPUT}/mean_va.R.area.func.gii
+  if [[ ! -f ${left_va} ]] && [[ ! -f ${right_va} ]]; then
+    # Set to empty strings if they do not exist -
+    # as both variables are referenced later.
+    left_va=""; right_va=""
+  fi
 fi
 
 #
