@@ -5,3 +5,4 @@ wb_command.help.sh
 post.proc.analysis/*
 work.new/*
 PALM/*
+# palm.setup.config.sh

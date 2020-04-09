@@ -4,6 +4,9 @@
 # 
 # Test variables are commented out of code
 
+# Test shell
+# bsub -W 8:0 -M 16000 -R "span[hosts=1]" -n 4 -Is bash
+
 ############################################################################################################################################
 # The problem seems to be that reading GIFTI needs some functions to be compiled for your platform. Could you try the following:
 
@@ -51,7 +54,7 @@ module load fsl/6.0.3         # May or may not work reliably (contains library l
 # module load octave/3.8.2
 module load octave/5.2.0
 module load parallel/20140422   # Required for local compute node parallization of several jobs
-# module load palm/a117
+module load palm/a117
 
 echo ""
 echo $FSLDIR

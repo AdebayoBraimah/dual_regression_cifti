@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Re-compile mex files to be compatible with anoter version of GNU Octave.
+# This link contained the relative information: https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=fsl;e6eae2bd.1903
+
 # PALM directory
 PALMDIR=${1}
 
