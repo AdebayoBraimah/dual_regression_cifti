@@ -46,28 +46,28 @@ source ~/.bash_profile
 module unload fsl/5.0.11
 
 # Load modules
-module load fsl/6.0.3         # May or may not work reliably (contains library linker issues)
-# module load fsl/6.0.0-2       # May contain library linker issues
+module load fsl/6.0.3             # May or may not work reliably (contains library linker issues)
+# module load fsl/6.0.0-2         # May contain library linker issues
 # module load dhcp/1.1.0-a        # This has wb_command installed
 # module load fsl/5.0.11          # Current version that works reliably
 # module load matlab/2017a        # This specific version as it is referenced in PALM LSF implementation
 # module load octave/3.8.2
 module load octave/5.2.0
-module load parallel/20140422   # Required for local compute node parallization of several jobs
+module load parallel/20140422     # Required for local compute node parallization of several jobs
 module load palm/a117
 
 echo ""
 echo $FSLDIR
 
-# Define PALM directory path and add PALM to system path
-PALMDIR=${scripts_dir}/palm-alpha116
-export PATH=${PATH}:${PALMDIR}
+# # Define PALM directory path and add PALM to system path
+# PALMDIR=${scripts_dir}/palm-alpha116
+# export PATH=${PATH}:${PALMDIR}
 
 # Input variables
 echo ""
 echo "Performing Analysis"
 echo ""
-ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
+ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
 jobs=10
 perm=5000
 # design=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.mat
@@ -144,7 +144,8 @@ done
 echo ""
 echo "Performing dual regression of aggressively denoised data"
 echo ""
-bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --no-stats-cleanup --resub --precision double
+bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double
+# bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --no-stats-cleanup --resub --precision double
 # echo ""
 # echo "Performing dual regression of non-aggressively denoised data"
 # echo ""
