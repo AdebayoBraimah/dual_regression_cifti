@@ -4,20 +4,6 @@
 # 
 # Test variables are commented out of code
 
-# Test shell
-# bsub -W 8:0 -M 16000 -R "span[hosts=1]" -n 4 -Is bash
-
-############################################################################################################################################
-# The problem seems to be that reading GIFTI needs some functions to be compiled for your platform. Could you try the following:
-
-# 1) Cd into palm-alpha106/fileio/@gifti/private
-
-# 2) Run:
-
-# mkoctfile --mex zstream.c
-# mkoctfile --mex miniz.c
-############################################################################################################################################
-
 ################################# Test Code #################################
 
 # Directory variables
@@ -36,7 +22,6 @@ nonagg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_nonagg.analy
 # ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ROIs/ROIs.cifti/attention_network.network.dscalar.nii
 # perm=5
 
-# out_dir_agg=${agg_dir}/seed-to-voxel.analysis.CR.test.09_Apr_2020
 out_dir_agg=${agg_dir}/seed-to-voxel.analysis
 out_dir_nonagg=${nonagg_dir}/seed-to-voxel.analysis
 
@@ -57,9 +42,6 @@ module load octave/5.2.0
 module load parallel/20140422     # Required for local compute node parallization of several jobs
 module load palm/a117
 
-echo ""
-echo "FSLDIR: ${FSLDIR}"
-
 # # Define PALM directory path and add PALM to system path
 # PALMDIR=${scripts_dir}/palm-alpha116
 # export PATH=${PATH}:${PALMDIR}
@@ -68,12 +50,12 @@ echo "FSLDIR: ${FSLDIR}"
 echo ""
 echo "Performing Analysis"
 echo ""
-# ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
+
 ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
 jobs=10
 perm=5000
-# design=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.mat
-# contrast=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/contrast.con
+design=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.mat
+contrast=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/contrast.con
 
 mem=10000
 wall=2000
@@ -147,8 +129,7 @@ done
 echo ""
 echo "Performing dual regression of aggressively denoised data"
 echo ""
-bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double
-# bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --no-stats-cleanup --resub --precision double
+bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --no-stats-cleanup
 # echo ""
 # echo "Performing dual regression of non-aggressively denoised data"
 # echo ""

@@ -98,7 +98,8 @@ fi
 tmp_subs=( $(cd ${hcp_dir}; ls -d sub-* | sed "s@sub-@@g") )
 
 ## Subs to exclude (QC-failures and/or no-info)
-exclude=( 1515 1013 1039 1606 1618 )
+# exclude=( 1515 1013 1039 1606 1618 )
+exclude=( )
 
 for ex in ${exclude[@]}; do
   tmp_subs=("${tmp_subs[@]/$ex}")
@@ -128,7 +129,7 @@ done
 echo ""
 echo "Performing dual regression of aggressively denoised data"
 echo ""
-bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double
+bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --no-stats-cleanup
 # echo ""
 # echo "Performing dual regression of non-aggressively denoised data"
 # echo ""
