@@ -928,9 +928,9 @@ while [ ${j} -lt ${Nics} ] ; do
   # In the case of 1-sample t-tests
   if [[ ${one_sample} = "true" ]]; then
     # Base PALM commands
-    PALM_CMD_vol_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.nii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/vol.neg/vol -T -m ${OUTPUT}/palm.mask/vol.mask.nii ${palm_cmds}"
-    PALM_CMD_surf_L_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.neg.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L.neg/cort.L -T -tfce2D -s ${template_surf_L} ${left_va} -m ${OUTPUT}/palm.mask/cort.L.mask.func.gii ${palm_cmds}"
-    PALM_CMD_surf_R_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.neg.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R.neg/cort.R -T -tfce2D -s ${template_surf_R} ${right_va} -m ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${palm_cmds}"
+    PALM_CMD_vol_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.nii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/vol.neg/vol.neg -T -m ${OUTPUT}/palm.mask/vol.mask.nii ${palm_cmds}"
+    PALM_CMD_surf_L_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.neg.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L.neg/cort.L.neg -T -tfce2D -s ${template_surf_L} ${left_va} -m ${OUTPUT}/palm.mask/cort.L.mask.func.gii ${palm_cmds}"
+    PALM_CMD_surf_R_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.neg.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R.neg/cort.R.neg -T -tfce2D -s ${template_surf_R} ${right_va} -m ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${palm_cmds}"
   fi
 
   # Check if PALM jobs need to be submitted
