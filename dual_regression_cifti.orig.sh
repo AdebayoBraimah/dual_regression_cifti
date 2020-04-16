@@ -281,7 +281,6 @@ DES_NORM=""
 jobs=$(expr $(getconf _NPROCESSORS_ONLN) - 1) # N-1 number of cores - works on bash v3.0+
 NAF2=0
 convert_all=false
-one_sample=false
 
 # PALM runtime defaults
 fdr=false 
@@ -565,10 +564,6 @@ if [[ ! -z ${df} ]]; then
   DESIGN+="-f ${df} "
 fi
 
-if [[ -z ${DESIGN} ]]; then
-  one_sample=true
-fi
-
 # Surface templates
 if [[ ! -z ${atlas_dir} ]]; then
   rm -rf ${OUTPUT}/surf.templates
@@ -665,6 +660,9 @@ if [[ ${#dr_cii[@]} -eq 0 ]]; then
   INPUTS=( $(cd ${OUTPUT}/subs.fake_nifti; ls $(pwd)/*.nii*) )
 
   # Create mask
+
+  # EDIT: imglob does not work on CCHMC cluster. 
+  # Used bash version insted
   echo ""
   echo "Creating common mask"
   j=0
@@ -676,7 +674,7 @@ if [[ ${#dr_cii[@]} -eq 0 ]]; then
   parallel -j ${jobs} < ${LOGDIR}/drA
 cat <<EOF > ${LOGDIR}/drB
 #!/bin/sh
-\${FSLDIR}/bin/fslmerge -t ${OUTPUT}/maskALL \`${FSLDIR}/bin/imglob ${OUTPUT}/mask_*\`
+\${FSLDIR}/bin/fslmerge -t ${OUTPUT}/maskALL \`${scripts_dir}/imglob ${OUTPUT}/mask_*\`
 \${FSLDIR}/bin/fslmaths ${OUTPUT}/maskALL -Tmin ${OUTPUT}/mask
 \${FSLDIR}/bin/imrm ${OUTPUT}/mask_*
 EOF
@@ -705,14 +703,14 @@ EOF
      for i in ${INPUTS[@]}; do
         s=subject$(${FSLDIR}/bin/zeropad ${j} 5)
         echo "${FSLDIR}/bin/melodic -i ${OUTPUT}/dr_stage2_${s} --ICs=${OUTPUT}/dr_stage2_${s} --mix=${OUTPUT}/tmp.txt -o ${OUTPUT}/MM_${s} --Oall --report -v --mmthresh=0" >> ${LOGDIR}/drD1
-        echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/MM_${s}/stats/thresh2 \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat?.* ${OUTPUT}/MM_${s}/stats/thresh_zstat??.* ${OUTPUT}/MM_${s}/stats/thresh_zstat???.*\` ; sleep 10 ; \
-        ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat*.*\` ; \
+        echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/MM_${s}/stats/thresh2 \`${scripts_dir}/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat?.* ${OUTPUT}/MM_${s}/stats/thresh_zstat??.* ${OUTPUT}/MM_${s}/stats/thresh_zstat???.*\` ; sleep 10 ; \
+        ${FSLDIR}/bin/imrm \`${scripts_dir}/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat*.*\` ; \
         cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_negative.nii.gz ; \
         cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_positive.nii.gz ; \
         ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -uthr -2 ${OUTPUT}/MM_${s}/stats/thresh2_negative ; \
         ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_positive -thr 2 ${OUTPUT}/MM_${s}/stats/thresh2_positive ; \
         ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -add ${OUTPUT}/MM_${s}/stats/thresh2_positive ${OUTPUT}/MM_${s}/stats/thresh2 ; \
-              ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_{s}/stats/thresh2_*.*\` ; \
+              ${FSLDIR}/bin/imrm \`${scripts_dir}/imglob ${OUTPUT}/MM_{s}/stats/thresh2_*.*\` ; \
         ${FSLDIR}/bin/fsl_glm -i ${i} -d ${OUTPUT}/MM_${s}/stats/thresh2 -o ${OUTPUT}/dr_stage4_${s}.txt --demean -m ${OUTPUT}/mask" >> ${LOGDIR}/drD2
         j=`echo "${j} 1 + p" | dc -`
      done
@@ -731,8 +729,8 @@ EOF
   while [ ${j} -lt ${Nics} ] ; do
     jj=$(${FSLDIR}/bin/zeropad ${j} 4)
 
-    echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/dr_stage2_ic${jj} \`${FSLDIR}/bin/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` ; \
-          ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` " >> ${LOGDIR}/drE
+    echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/dr_stage2_ic${jj} \`${scripts_dir}/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` ; \
+          ${FSLDIR}/bin/imrm \`${scripts_dir}/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` " >> ${LOGDIR}/drE
     j=$(echo "${j} 1 + p" | dc -)
   done
   # ID_drE=`${FSLDIR}/bin/fsl_sub -j $ID_drC -T 60 -N randomise -l $LOGDIR -t ${LOGDIR}/drE`
@@ -863,24 +861,6 @@ while [ ${j} -lt ${Nics} ] ; do
         -metric CORTEX_RIGHT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii ; \
         ${uncompress_cmd}" >> ${LOGDIR}/dr.ciftiD
 
-  # File and directory handling in the case of one-sample t-tests
-  if [[ ${one_sample} = "true" ]]; then
-    # Internally uncompress gifti files if octave is being used
-    if hash octave 2>/dev/null; then
-      uncompress_cmd="wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.neg.func.gii ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.neg.func.gii ; \
-          wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.neg.func.gii ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.neg.func.gii"
-    fi
-    # Perform sign-flip of input data for negative contrast
-    # PALM's expected behavior should be similar to that of randomise
-    # See this link for details: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/GLM#Single-Group_Average_.28One-Sample_T-Test.29
-    echo "mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/vol.neg ; mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L.neg ; mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R.neg ; \
-          wb_command -cifti-math '(x * -1)' ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.dscalar.nii -fixnan 0 -var x ${OUTPUT}/dr_stage2_ic${jj}.dscalar.nii ; \
-          wb_command -cifti-separate ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.dscalar.nii COLUMN -volume-all ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.nii \
-          -metric CORTEX_LEFT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.neg.func.gii \
-          -metric CORTEX_RIGHT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.neg.func.gii ; \
-          ${uncompress_cmd}" >> ${LOGDIR}/dr.ciftiD
-  fi
-
   j=$(echo "${j} 1 + p" | dc -)
 done
 
@@ -925,14 +905,6 @@ while [ ${j} -lt ${Nics} ] ; do
   PALM_CMD_surf_L="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L/cort.L -T -tfce2D -s ${template_surf_L} ${left_va} -m ${OUTPUT}/palm.mask/cort.L.mask.func.gii ${palm_cmds}"
   PALM_CMD_surf_R="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R/cort.R -T -tfce2D -s ${template_surf_R} ${right_va} -m ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${palm_cmds}"
 
-  # In the case of 1-sample t-tests
-  if [[ ${one_sample} = "true" ]]; then
-    # Base PALM commands
-    PALM_CMD_vol_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.nii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/vol.neg/vol -T -m ${OUTPUT}/palm.mask/vol.mask.nii ${palm_cmds}"
-    PALM_CMD_surf_L_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.neg.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L.neg/cort.L -T -tfce2D -s ${template_surf_L} ${left_va} -m ${OUTPUT}/palm.mask/cort.L.mask.func.gii ${palm_cmds}"
-    PALM_CMD_surf_R_neg="palm -i ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.neg.func.gii -o ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R.neg/cort.R -T -tfce2D -s ${template_surf_R} ${right_va} -m ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${palm_cmds}"
-  fi
-
   # Check if PALM jobs need to be submitted
   dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls *tfce*.dscalar.nii) )
   if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
@@ -961,25 +933,6 @@ while [ ${j} -lt ${Nics} ] ; do
     if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
       bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.log -e ${o_log}_PALM_surfR.err -J ic${jj}_PALM.R -K ${PALM_CMD_surf_R} &
       echo "bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.log -e ${o_log}_PALM_surfR.err -J ic${jj}_PALM.R -K ${PALM_CMD_surf_R}" >> ${LOGDIR}/dr.PALM
-    fi
-    # 1-sample t-tests job submissions
-    if [[ ${one_sample} = "true" ]]; then
-      # Run each job for PALM in parallel - this is faster
-      dr_palm_cii=""; dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls vol.neg/*.nii) )
-      if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
-        bsub -N ${job_cmds} -o ${o_log}_PALM_vol.neg.log -e ${o_log}_PALM_vol.neg.err -J ic${jj}_PALM.neg.V -K ${PALM_CMD_vol_neg} &
-        echo "bsub -N ${job_cmds} -o ${o_log}_PALM_vol.neg.log -e ${o_log}_PALM_vol.neg.err -J ic${jj}_PALM.neg.V -K ${PALM_CMD_vol_neg}" >> ${LOGDIR}/dr.PALM
-      fi
-      dr_palm_cii=""; dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls cort.L.neg/*.gii) )
-      if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
-        bsub -N ${job_cmds} -o ${o_log}_PALM_surfL.neg.log -e ${o_log}_PALM_surfL.neg.err -J ic${jj}_PALM.neg.L -K ${PALM_CMD_surf_L_neg} &
-        echo "bsub -N ${job_cmds} -o ${o_log}_PALM_surfL.neg.log -e ${o_log}_PALM_surfL.neg.err -J ic${jj}_PALM.neg.L -K ${PALM_CMD_surf_L_neg}" >> ${LOGDIR}/dr.PALM
-      fi
-      dr_palm_cii=""; dr_palm_cii=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm; ls cort.R.neg/*.gii) )
-      if [[ ${#dr_palm_cii[@]} -eq 0 ]]; then
-        bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.neg.log -e ${o_log}_PALM_surfR.neg.err -J ic${jj}_PALM.neg.R -K ${PALM_CMD_surf_R_neg} &
-        echo "bsub -N ${job_cmds} -o ${o_log}_PALM_surfR.neg.log -e ${o_log}_PALM_surfR.neg.err -J ic${jj}_PALM.neg.R -K ${PALM_CMD_surf_R_neg}" >> ${LOGDIR}/dr.PALM
-      fi
     fi
   fi
   j=$(echo "${j} 1 + p" | dc -)
@@ -1034,8 +987,6 @@ done
 if hash octave 2>/dev/null; then
   wb_command -gifti-convert GZIP_BASE64_BINARY ${template_surf_L} ${template_surf_L}
   wb_command -gifti-convert GZIP_BASE64_BINARY ${template_surf_R} ${template_surf_R}
-  wb_command -gifti-convert GZIP_BASE64_BINARY ${OUTPUT}/palm.mask/cort.L.mask.func.gii ${OUTPUT}/palm.mask/cort.L.mask.func.gii
-  wb_command -gifti-convert GZIP_BASE64_BINARY ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${OUTPUT}/palm.mask/cort.R.mask.func.gii
 fi
 
 #
@@ -1058,22 +1009,7 @@ while [ ${j} -lt ${Nics} ] ; do
   cort_R=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R; ls $(pwd)/*tfce*.gii | sort) )
   subcort=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm/vol; ls $(pwd)/*tfce*.nii | sort) )
 
-  # Add files to the array in the case of 1-sample t-test
-  if [[ ${one_sample} = "true" ]]; then
-    cort_L+=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L.neg; ls $(pwd)/*tfce*.gii | sort) )
-    cort_R+=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R.neg; ls $(pwd)/*tfce*.gii | sort) )
-    subcort+=( $(cd ${OUTPUT}/dr_stage3_ic${jj}.palm/vol.neg; ls $(pwd)/*tfce*.nii | sort) )
-  fi
-
-  # Write commands to internally compress gifti files if Octave was used
-  if hash octave 2>/dev/null; then
-    for (( i = 0; i < ${#cort_L[@]}; i++)); do
-      echo "wb_command -gifti-convert GZIP_BASE64_BINARY ${cort_L[$i]} ${cort_L[$i]} ; \
-            wb_command -gifti-convert GZIP_BASE64_BINARY ${cort_R[$i]} ${cort_R[$i]}" >> ${LOGDIR}/dr.ciftiE1
-    done
-  fi
-
-  # Write commands to merge CIFTIs into dscalar 
+  # Merge CIFTIs into dscalar 
   for ((i = 0; i < ${#subcort[@]}; i++)); do
     # Create output file name
     file=${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage3_ic${jj}
@@ -1090,19 +1026,14 @@ while [ ${j} -lt ${Nics} ] ; do
   j=$(echo "${j} 1 + p" | dc -)
 done
 
-# Internally compress gifti files if Octave was used
-if hash octave 2>/dev/null; then
-  parallel -j ${jobs} < ${LOGDIR}/dr.ciftiE1
-fi
-
 # Merge CIFTIs into dscalar
 parallel -j ${jobs} < ${LOGDIR}/dr.ciftiE
 
 if [[ ${stat_cleanup} = "true" ]]; then
   palm_sub_dirs=()
-  palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/vol*) )
-  palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/cort.L*) )
-  palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/cort.R*) )
+  palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/vol) )
+  palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/cort.L) )
+  palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/cort.R) )
   palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/*.gii) )
   palm_sub_dirs+=( $(cd ${OUTPUT}; ls -d $(pwd)/dr_stage3_ic*.palm/dr_stage2_ic*.nii) )
 
