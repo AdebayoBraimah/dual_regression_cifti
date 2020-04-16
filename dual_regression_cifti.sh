@@ -716,10 +716,10 @@ EOF
         ${FSLDIR}/bin/fsl_glm -i ${i} -d ${OUTPUT}/MM_${s}/stats/thresh2 -o ${OUTPUT}/dr_stage4_${s}.txt --demean -m ${OUTPUT}/mask" >> ${LOGDIR}/drD2
         j=`echo "${j} 1 + p" | dc -`
      done
-     ID_drD1=`${FSLDIR}/bin/fsl_sub -j ${i}D_drC -N mixture_model -l $LOGDIR -t ${LOGDIR}/drD1`
-     ID_drD2=`${FSLDIR}/bin/fsl_sub -j ${i}D_drD1 -N thresholdedDR -l $LOGDIR -t ${LOGDIR}/drD2`
-     # parallel -j ${jobs} < ${LOGDIR}/drD1
-     # parallel -j ${jobs} < ${LOGDIR}/drD2
+     # ID_drD1=`${FSLDIR}/bin/fsl_sub -j ${i}D_drC -N mixture_model -l $LOGDIR -t ${LOGDIR}/drD1`
+     # ID_drD2=`${FSLDIR}/bin/fsl_sub -j ${i}D_drD1 -N thresholdedDR -l $LOGDIR -t ${LOGDIR}/drD2`
+     parallel -j ${jobs} < ${LOGDIR}/drD1
+     parallel -j ${jobs} < ${LOGDIR}/drD2
   fi
 
   # Sort maps
