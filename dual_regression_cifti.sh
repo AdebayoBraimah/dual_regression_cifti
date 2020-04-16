@@ -281,6 +281,7 @@ DES_NORM=""
 jobs=$(expr $(getconf _NPROCESSORS_ONLN) - 1) # N-1 number of cores - works on bash v3.0+
 NAF2=0
 convert_all=false
+one_sample=false
 
 # PALM runtime defaults
 fdr=false 
@@ -562,6 +563,10 @@ if [[ ! -z ${df} ]]; then
   cp ${df} ${OUTPUT}/design.fts
   df=${OUTPUT}/design.fts
   DESIGN+="-f ${df} "
+fi
+
+if [[ -z ${DESIGN} ]]; then
+  one_sample=true
 fi
 
 # Surface templates
@@ -857,6 +862,16 @@ while [ ${j} -lt ${Nics} ] ; do
         -metric CORTEX_LEFT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.L.func.gii \
         -metric CORTEX_RIGHT ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.R.func.gii ; \
         ${uncompress_cmd}" >> ${LOGDIR}/dr.ciftiD
+
+  # File and directory handling in the case of one-sample t-tests
+  if [[ ${one_sample} = "true" ]]; then
+    # Perform sign-flip of input data for negative contrast
+    # PALM's expected behavior should be similar to that of randomise
+    # See this link for details: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/GLM#Single-Group_Average_.28One-Sample_T-Test.29
+    echo "mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/vol.neg ; mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.L.neg ; mkdir -p ${OUTPUT}/dr_stage3_ic${jj}.palm/cort.R.neg ; \
+          wb_command -cifti-math '(x * -1)' ${OUTPUT}/dr_stage3_ic${jj}.palm/dr_stage2_ic${jj}.neg.dscalar.nii -fixnan 0 -var x ${OUTPUT}/dr_stage2_ic${jj}.dscalar.nii "
+          # Then separate - figure out sort and merge from PALM output
+  fi
 
   j=$(echo "${j} 1 + p" | dc -)
 done
