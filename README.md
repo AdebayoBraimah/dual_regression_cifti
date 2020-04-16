@@ -6,7 +6,7 @@ This script requires that `FSL`, connectome workbench (`wb_command`), FSL's PALM
 
 **Note**:
   * Intended to run on LSF platforms (i.e. jobs for PALM are submitted via `bsub` to run in parallel).
-  * The bash version of `imglob` was used as the LSF platform did not have the proper fslpython configuration.
+  <!-- * The bash version of `imglob` was used as the LSF platform did not have the proper fslpython configuration. -->
 
 ```
 

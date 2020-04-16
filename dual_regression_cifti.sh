@@ -660,9 +660,6 @@ if [[ ${#dr_cii[@]} -eq 0 ]]; then
   INPUTS=( $(cd ${OUTPUT}/subs.fake_nifti; ls $(pwd)/*.nii*) )
 
   # Create mask
-
-  # EDIT: imglob does not work on CCHMC cluster. 
-  # Used bash version insted
   echo ""
   echo "Creating common mask"
   j=0
@@ -674,7 +671,7 @@ if [[ ${#dr_cii[@]} -eq 0 ]]; then
   parallel -j ${jobs} < ${LOGDIR}/drA
 cat <<EOF > ${LOGDIR}/drB
 #!/bin/sh
-\${FSLDIR}/bin/fslmerge -t ${OUTPUT}/maskALL \`${scripts_dir}/imglob ${OUTPUT}/mask_*\`
+\${FSLDIR}/bin/fslmerge -t ${OUTPUT}/maskALL \`${FSLDIR}/bin/imglob ${OUTPUT}/mask_*\`
 \${FSLDIR}/bin/fslmaths ${OUTPUT}/maskALL -Tmin ${OUTPUT}/mask
 \${FSLDIR}/bin/imrm ${OUTPUT}/mask_*
 EOF
@@ -703,14 +700,14 @@ EOF
      for i in ${INPUTS[@]}; do
         s=subject$(${FSLDIR}/bin/zeropad ${j} 5)
         echo "${FSLDIR}/bin/melodic -i ${OUTPUT}/dr_stage2_${s} --ICs=${OUTPUT}/dr_stage2_${s} --mix=${OUTPUT}/tmp.txt -o ${OUTPUT}/MM_${s} --Oall --report -v --mmthresh=0" >> ${LOGDIR}/drD1
-        echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/MM_${s}/stats/thresh2 \`${scripts_dir}/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat?.* ${OUTPUT}/MM_${s}/stats/thresh_zstat??.* ${OUTPUT}/MM_${s}/stats/thresh_zstat???.*\` ; sleep 10 ; \
-        ${FSLDIR}/bin/imrm \`${scripts_dir}/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat*.*\` ; \
+        echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/MM_${s}/stats/thresh2 \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat?.* ${OUTPUT}/MM_${s}/stats/thresh_zstat??.* ${OUTPUT}/MM_${s}/stats/thresh_zstat???.*\` ; sleep 10 ; \
+        ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat*.*\` ; \
         cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_negative.nii.gz ; \
         cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_positive.nii.gz ; \
         ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -uthr -2 ${OUTPUT}/MM_${s}/stats/thresh2_negative ; \
         ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_positive -thr 2 ${OUTPUT}/MM_${s}/stats/thresh2_positive ; \
         ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -add ${OUTPUT}/MM_${s}/stats/thresh2_positive ${OUTPUT}/MM_${s}/stats/thresh2 ; \
-              ${FSLDIR}/bin/imrm \`${scripts_dir}/imglob ${OUTPUT}/MM_{s}/stats/thresh2_*.*\` ; \
+              ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_{s}/stats/thresh2_*.*\` ; \
         ${FSLDIR}/bin/fsl_glm -i ${i} -d ${OUTPUT}/MM_${s}/stats/thresh2 -o ${OUTPUT}/dr_stage4_${s}.txt --demean -m ${OUTPUT}/mask" >> ${LOGDIR}/drD2
         j=`echo "${j} 1 + p" | dc -`
      done
@@ -729,8 +726,8 @@ EOF
   while [ ${j} -lt ${Nics} ] ; do
     jj=$(${FSLDIR}/bin/zeropad ${j} 4)
 
-    echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/dr_stage2_ic${jj} \`${scripts_dir}/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` ; \
-          ${FSLDIR}/bin/imrm \`${scripts_dir}/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` " >> ${LOGDIR}/drE
+    echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/dr_stage2_ic${jj} \`${FSLDIR}/bin/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` ; \
+          ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` " >> ${LOGDIR}/drE
     j=$(echo "${j} 1 + p" | dc -)
   done
   # ID_drE=`${FSLDIR}/bin/fsl_sub -j $ID_drC -T 60 -N randomise -l $LOGDIR -t ${LOGDIR}/drE`
