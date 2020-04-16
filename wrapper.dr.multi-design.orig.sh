@@ -22,7 +22,7 @@ nonagg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_nonagg.analy
 # ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ROIs/ROIs.cifti/attention_network.network.dscalar.nii
 # perm=5
 
-out_dir_agg=${agg_dir}/seed-to-voxel.analysis.test
+out_dir_agg=${agg_dir}/seed-to-voxel.analysis
 out_dir_nonagg=${nonagg_dir}/seed-to-voxel.analysis
 
 # source binaries from home directory
@@ -51,8 +51,7 @@ echo ""
 echo "Performing Analysis"
 echo ""
 
-# ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
-ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
+ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
 jobs=10
 perm=5000
 design=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design.1sample/grp.design.mat
