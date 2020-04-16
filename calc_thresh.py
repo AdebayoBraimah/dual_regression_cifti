@@ -34,10 +34,11 @@ def thresh_bonf(alpha, N, log=False):
     thresh (float): Bonferroni-corrected statistical threshold
   '''
 
-  if not log:
-    thresh = (alpha / N)
+  # Compute Bonferroni corrected threshold for some statistical test multiplicity
   if log:
     thresh = -(math.log((alpha) / N, 10))
+  else:
+    thresh = (alpha / N)
 
   return thresh
 
@@ -58,10 +59,11 @@ def thresh_sidak(alpha, N, log=False):
     thresh (float): Sidak-corrected statistical threshold
   '''
 
-  if not log:
-    thresh = (1 - (1 - alpha) ** (1 / N))
+  # Compute Sidak corrected threshold for some statistical test multiplicity
   if log:
     thresh = -(math.log((1 - (1 - alpha) ** (1 / N)), 10))
+  else:
+    thresh = (1 - (1 - alpha) ** (1 / N))
 
   return thresh
 
