@@ -1158,3 +1158,4 @@ for ((i = 0; i < ${#tstats[@]}; i++)); do
     scale_palette --file ${fdrs[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
 done
+      

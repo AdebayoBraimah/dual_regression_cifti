@@ -22,7 +22,7 @@ nonagg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_nonagg.analy
 # ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ROIs/ROIs.cifti/attention_network.network.dscalar.nii
 # perm=5
 
-out_dir_agg=${agg_dir}/seed-to-voxel.analysis.test
+out_dir_agg=${agg_dir}/seed-to-voxel.analysis.1sample
 out_dir_nonagg=${nonagg_dir}/seed-to-voxel.analysis
 
 # source binaries from home directory
@@ -51,8 +51,8 @@ echo ""
 echo "Performing Analysis"
 echo ""
 
-# ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
-ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
+ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
+# ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
 jobs=10
 perm=500
 design=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design.1sample/grp.design.mat
@@ -60,15 +60,15 @@ contrast=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design.1sample/grp.
 
 mem=10000
 wall=2000
-queue=normal
-# queue=long
+# queue=normal
+queue=long
 # queue=gpu-nodes
 
 # launch job
 l_wall=2000
 l_mem=16000
-l_queue=normal
-# l_queue=long
+# l_queue=normal
+l_queue=long
 
 if [[ ! -d ${agg_dir} ]]; then
   mkdir -p ${agg_dir}
@@ -131,7 +131,8 @@ echo ""
 echo "Performing dual regression of aggressively denoised data"
 echo ""
 # bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --two-tail --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --no-stats-cleanup
-bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --no-stats-cleanup # 1-sample t-test integration test
+# bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --no-stats-cleanup # 1-sample t-test integration test
+bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --permutations ${perm} --thr --fdr --log-p --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double # 1-sample t-test command
 # echo ""
 # echo "Performing dual regression of non-aggressively denoised data"
 # echo ""
