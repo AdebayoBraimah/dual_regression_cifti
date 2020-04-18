@@ -54,7 +54,7 @@ echo ""
 ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.4/ROIs.4.dscalar.nii
 # ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.3/ciftis/ROIs.dscalar.nii
 jobs=10
-perm=500
+perm=5000
 design=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design.1sample/grp.design.mat
 contrast=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design.1sample/grp.design.con
 

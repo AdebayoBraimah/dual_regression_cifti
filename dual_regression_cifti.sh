@@ -788,7 +788,9 @@ if [[ ${#dr_cii[@]} -eq 0 ]] && [[ ! -f ${OUTPUT}/ic_maps.dscalar.nii ]]; then
     wb_command -gifti-convert BASE64_BINARY ${OUTPUT}/palm.mask/cort.R.mask.func.gii ${OUTPUT}/palm.mask/cort.R.mask.func.gii
   fi
 
+  # Copy original IC map cifti file to output directory and create info text file
   cp ${ICA_MAPS_CIFTI} ${OUTPUT}/ic_maps.dscalar.nii
+  wb_command -file-information ${OUTPUT}/ic_maps.dscalar.nii > ${OUTPUT}/ic_maps.dscalar.info.txt
 fi
 
 #
@@ -1127,35 +1129,43 @@ echo ""
 echo "Corrected threshold: ${max_thresh}"
 echo ""
 
+# Copy MNI template (2mm) to output directory
+if [[ -d ${atlas_dir} ]]; then
+  cp ${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz ${atlas_dir}/MNI152_T1_2mm.nii.gz
+  vol_file=$(realpath ${atlas_dir}/MNI152_T1_2mm.nii.gz)
+else
+  cp ${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz ${OUTPUT}/MNI152_T1_2mm.nii.gz
+  vol_file=$(realpath ${OUTPUT}/MNI152_T1_2mm.nii.gz)
+fi
+
 # Write auxillary and statistal images to spec file
 for ((i = 0; i < ${#tstats[@]}; i++)); do
   # All stats arrays are assumed to have equal length -
   # otherwise this does not work as expected
   wb_command -add-to-spec-file ${tstat_spec} OTHER ${tstats[$i]}
-  wb_command -add-to-spec-file ${OUTPUT}/ic_maps.dscalar.nii OTHER ${tstats[$i]}
-  wb_command -add-to-spec-file ${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz OTHER ${tstats[$i]}
+  wb_command -add-to-spec-file ${tstat_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+  wb_command -add-to-spec-file ${tstat_spec} OTHER ${vol_file}
   scale_palette --file ${tstats[$i]} --min ${min_thresh} --max ${max_thresh}
 
   # Check if spec file exists - write stat images to them
   if [[ -f ${uncps_spec} ]]; then
     wb_command -add-to-spec-file ${uncps_spec} OTHER ${uncps[$i]} 
-    wb_command -add-to-spec-file ${OUTPUT}/ic_maps.dscalar.nii OTHER ${uncps[$i]}
-    wb_command -add-to-spec-file ${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz OTHER ${uncps[$i]}
+    wb_command -add-to-spec-file ${uncps_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+    wb_command -add-to-spec-file ${uncps_spec} OTHER ${vol_file}
     scale_palette --file ${uncps[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
 
   if [[ -f ${fwes_spec} ]]; then
     wb_command -add-to-spec-file ${fwes_spec} OTHER ${fwes[$i]}
-    wb_command -add-to-spec-file ${OUTPUT}/ic_maps.dscalar.nii OTHER ${fwes[$i]}
-    wb_command -add-to-spec-file ${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz OTHER ${fwes[$i]}
+    wb_command -add-to-spec-file ${fwes_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+    wb_command -add-to-spec-file ${fwes_spec} OTHER ${vol_file}
     scale_palette --file ${fwes[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
 
   if [[ -f ${fdrs_spec} ]]; then
     wb_command -add-to-spec-file ${fdrs_spec} OTHER ${fdrs[$i]}
-    wb_command -add-to-spec-file ${OUTPUT}/ic_maps.dscalar.nii OTHER ${fdrs[$i]}
-    wb_command -add-to-spec-file ${FSLDIR}/data/standard/MNI152_T1_2mm.nii.gz OTHER ${fdrs[$i]}
+    wb_command -add-to-spec-file ${fdrs_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+    wb_command -add-to-spec-file ${fdrs_spec} OTHER ${vol_file}
     scale_palette --file ${fdrs[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
 done
-      
