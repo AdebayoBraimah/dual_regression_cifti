@@ -10,14 +10,6 @@
 scripts_dir=$(dirname $(realpath ${0}))
 hcp_dir=/scratch/brac4g/CAP/BIDS/derivatives/ciftify
 atlas_dir=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.atlases/HCP_S1200_GroupAvg_v1
-design_name=sct_adhd_parent_no_covs # sct_adhd_parent_covs # sct_adhd_teacher_no_covs # sct_adhd_teacher_covs 
-design_dir=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/${design_name}
-
-# Design directory
-design=${design_dir}/grp.design.mat
-contrast=${design_dir}/grp.design.con
-exc_list=${design_dir}/grp.design.exclude.txt
-inc_list=${design_dir}/grp.design.include.txt
 
 agg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_agg.analysis
 nonagg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_nonagg.analysis
@@ -30,20 +22,21 @@ nonagg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_nonagg.analy
 # ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ROIs/ROIs.cifti/attention_network.network.dscalar.nii
 # perm=5
 
-out_dir_agg=${agg_dir}/seed-to-voxel.analysis.07_May_2020/${design_name}
+out_dir_agg=${agg_dir}/seed-to-voxel.analysis.05_May_2020_2
 out_dir_nonagg=${nonagg_dir}/seed-to-voxel.analysis
 
 # source binaries from home directory
-source ~/.bash_profile
+# source ~/.bash_profile
 
 # unload auto-loaded modules
-module unload fsl/5.0.11
+# module unload fsl/5.0.11
+# module unload fsl/5.0.9
 
 # Load modules
-module load fsl/6.0.3             # May or may not work reliably (contains library linker issues)
+# module load fsl/6.0.3             # May or may not work reliably (contains library linker issues)
 # module load fsl/6.0.0-2         # May contain library linker issues
-# module load dhcp/1.1.0-a        # This has wb_command installed
-# module load fsl/5.0.11          # Current version that works reliably
+module load dhcp/1.1.0-a        # This has wb_command installed
+module load fsl/5.0.11          # Current version that works reliably
 # module load matlab/2017a        # This specific version as it is referenced in PALM LSF implementation
 # module load octave/3.8.2
 module load octave/5.2.0
@@ -59,20 +52,19 @@ echo ""
 echo "Performing Analysis"
 echo ""
 
-ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.5/ROIs.5.dscalar.nii
-# ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.6/ROIs.6.dscalar.nii # Test ROI to replicate finding from 18 Feb 2020
+# ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.5/ROIs.5.dscalar.nii
+ic_map=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.ica/ROIs/ROIs.2/ciftis/ROIs.dscalar.nii # Test ROI to replicate finding from 18 Feb 2020
 jobs=10
-perm=5000
+perm=500
 # design=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design_sct_no_covs/grp.design.mat
 # contrast=/scratch/brac4g/CAP/BIDS/scripts/designs/design_mat/design_sct_no_covs/grp.design.con
 
-# # Replicate resuls from 18 Feb 2020
-# echo "Using old design"
-# echo""
-# design=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.18_Feb_2020/designs.mat
-# contrast=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.18_Feb_2020/contrast.con
+# Replicate resuls from 18 Feb 2020
+echo "Using old design"
+echo""
+design=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.18_Feb_2020/designs.mat
+contrast=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/designs.18_Feb_2020/designs.18_Feb_2020/contrast.con
 
-# PALM job sub reqs
 mem=10000
 wall=2000
 queue=normal
@@ -81,8 +73,8 @@ queue=normal
 # launch job
 l_wall=2000
 l_mem=16000
-# l_queue=normal
-l_queue=long
+l_queue=normal
+# l_queue=long
 
 if [[ ! -d ${agg_dir} ]]; then
   mkdir -p ${agg_dir}
@@ -113,9 +105,8 @@ fi
 tmp_subs=( $(cd ${hcp_dir}; ls -d sub-* | sed "s@sub-@@g") )
 
 ## Subs to exclude (QC-failures and/or no-info)
-# exclude=( 1515 1013 1039 1606 1618 )
-# exclude=( 1515 )
-mapfile -t exclude < ${exc_list}
+exclude=( 1515 1013 1039 1606 1618 )
+# exclude=( )
 
 for ex in ${exclude[@]}; do
   tmp_subs=("${tmp_subs[@]/$ex}")
@@ -145,13 +136,8 @@ done
 echo ""
 echo "Performing dual regression of aggressively denoised data"
 echo ""
-bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --no-stats-cleanup
-
-sleep 30
-
-cp ${exc_list} ${out_dir_agg}/scripts+logs
-cp ${inc_list} ${out_dir_agg}/scripts+logs
-
+# bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --precision double --two-tail # --no-stats-cleanup
+bsub -N -o ${o_agg} -e ${e_agg} -q ${l_queue} -M ${l_mem} -W ${l_wall} -J DR_agg ${scripts_dir}/dual_regression_cifti.orig.sh --queue ${queue} --surf-list-L ${L_s_list} --surf-list-R ${R_s_list} --ica-maps ${ic_map} --file-list ${sub_list_agg} --out-dir ${out_dir_agg} --atlas-dir ${atlas_dir} --jobs ${jobs} --des-norm --design ${design} --t-contrast ${contrast} --permutations ${perm} --thr --fdr --log-p --memory ${mem} --wall ${wall} --convert-all --sig 0.05 --method sid --resub --two-tail --no-stats-cleanup # --precision double
 # echo ""
 # echo "Performing dual regression of non-aggressively denoised data"
 # echo ""

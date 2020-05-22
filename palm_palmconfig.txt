@@ -1,0 +1,5 @@
+# Configuration file for PALM.
+# Version alpha117, running in Octave 5.2.0.
+# 08-May-2020 15:53:35
+
+-i /scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_agg.analysis/seed-to-voxel.analysis.07_May_2020/design_sct_covs/dr_stage3_ic0014.palm/dr_stage2_ic0014.L.func.gii
