@@ -43,7 +43,6 @@ Optional arguements:
                               need to be specified. Atlas directory name and layout are expected
                               to be similar to that of the HCP S1200 fs_LR atlas(es).
 --no-stats-cleanup            No clean-up of PALM's IC map sub-directory will be done
---convert-all                 Converts all output files from (fake) NIFTI-1 images to CIFTI (recommended)
 
 Dual Regression specific arguements:
 
@@ -53,8 +52,6 @@ Dual Regression specific arguements:
 -f, --f-contrast              Design F-contrast for final cross-subject modelling with PALM
 -n, -nperm, --permutations    Number of permutations for PALM. If not set or set to 0, then
                               permutations are performed exhaustively.
---thr                         Perform thresholded dual regression to obtain unbiased timeseries for connectomics 
-                              analyses (e.g., with FSLnets)
 
 PALM specific arguements:
 
@@ -62,7 +59,6 @@ PALM specific arguements:
 --f-only                      Run only the F-contrasts, not the t-contrasts.
 --save1-p                     Save (1-p) instead of the actual p-values (mutually exclusive with '--log-p').
 --log-p                       Save the output p-values as -log(p) (mutually exclusive with '--save1-p', recommended).
---two-tail                    Run two-tailed tests for all the t-contrasts instead of one-tailed.
 --demean                      Mean center the data, as well as all columns of the design matrix. If the design has 
                               an intercept, the intercept is removed.
 --sig                         Significance threshold for statistical thresholding [default: 0.05]
@@ -84,7 +80,7 @@ LSF specific arguements:
 NOTE:
 - Requires bash v4.0+
 - Requires FSL v5.0.11+
-- Requires Connectome Workbench v1.2.0+
+- Requires Connectome Workbench v1.3.2+
 - Requires FSL's PALM version alpha115+
 - Requires GNU parallel to be installed and
   added to system path
@@ -313,7 +309,7 @@ while [[ ${#} -gt 0 ]]; do
     -c|-contrast|--t-contrast) shift; dc=${1} ;;
     -f|--f-contrast) shift; df=${1} ;;
     -n|-nperm|--permutations) shift; NPERM=${1} ;;
-    --thr) NAF2=1 ;;
+    # --thr) NAF2=1 ;;
     -j|-jobs|--jobs) shift; jobs=${1} ;;
     -o|-out|--out-dir) shift; OUTPUT=${1} ;;
     -f|-files|--file-list) shift; file_list=${1} ;;
@@ -326,7 +322,7 @@ while [[ ${#} -gt 0 ]]; do
     --f-only) fonly=true ;;
     --save1-p) save1_p=true ;;
     --log-p) log_p=true ;;
-    --two-tail) twotail=true ;;
+    # --two-tail) twotail=true ;;
     --demean) demean=true ;;
     --convert-all) convert_all=true ;;
     --no-stats-cleanup) stat_cleanup=false ;;
@@ -391,10 +387,6 @@ fi
 if [[ -z ${OUTPUT} ]]; then
   echo_red "Input Error: Required - Output directory was not passed as an argument. Please check. Exiting..."
   exit 1
-# else
-#   touch ${OUTPUT}
-#   OUTPUT=$(realpath ${OUTPUT})
-#   rm ${OUTPUT}
 fi
 
 if [[ ! -f ${file_list} ]] || [[ -z ${file_list} ]]; then
@@ -460,6 +452,8 @@ if [[ ! -z ${NPERM} ]]; then
   fi
 fi
 
+# Ambiguous logic here - not entirely sure what is going on here.
+# These options should just be separate cli flags
 if [[ ! -z ${precis} ]]; then
   if [[ ${precis,,} != "single" ]] || [[ ${precis,,} != "double" ]]; then
     echo_red "PALM Input Error: Invalid precision option - valid options include: 'single' or 'double'. Exiting..."
@@ -701,30 +695,6 @@ EOF
   # ID_drC=`${FSLDIR}/bin/fsl_sub -j ${i}D_drB -T 30 -N dual_regression -l $LOGDIR -t ${LOGDIR}/drC`
   parallel -j ${jobs} < ${LOGDIR}/drC
 
-  if [ ${NAF2} -eq 1 ] ; then
-     echo "Doing thresholded dual regression"
-     echo "1" > ${OUTPUT}/tmp.txt
-     j=0
-     for i in ${INPUTS[@]}; do
-        s=subject$(${FSLDIR}/bin/zeropad ${j} 5)
-        echo "${FSLDIR}/bin/melodic -i ${OUTPUT}/dr_stage2_${s} --ICs=${OUTPUT}/dr_stage2_${s} --mix=${OUTPUT}/tmp.txt -o ${OUTPUT}/MM_${s} --Oall --report -v --mmthresh=0" >> ${LOGDIR}/drD1
-        echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/MM_${s}/stats/thresh2 \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat?.* ${OUTPUT}/MM_${s}/stats/thresh_zstat??.* ${OUTPUT}/MM_${s}/stats/thresh_zstat???.*\` ; sleep 10 ; \
-        ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat*.*\` ; \
-        cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_negative.nii.gz ; \
-        cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_positive.nii.gz ; \
-        ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -uthr -2 ${OUTPUT}/MM_${s}/stats/thresh2_negative ; \
-        ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_positive -thr 2 ${OUTPUT}/MM_${s}/stats/thresh2_positive ; \
-        ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -add ${OUTPUT}/MM_${s}/stats/thresh2_positive ${OUTPUT}/MM_${s}/stats/thresh2 ; \
-              ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_{s}/stats/thresh2_*.*\` ; \
-        ${FSLDIR}/bin/fsl_glm -i ${i} -d ${OUTPUT}/MM_${s}/stats/thresh2 -o ${OUTPUT}/dr_stage4_${s}.txt --demean -m ${OUTPUT}/mask" >> ${LOGDIR}/drD2
-        j=`echo "${j} 1 + p" | dc -`
-     done
-     # ID_drD1=`${FSLDIR}/bin/fsl_sub -j ${i}D_drC -N mixture_model -l $LOGDIR -t ${LOGDIR}/drD1`
-     # ID_drD2=`${FSLDIR}/bin/fsl_sub -j ${i}D_drD1 -N thresholdedDR -l $LOGDIR -t ${LOGDIR}/drD2`
-     parallel -j ${jobs} < ${LOGDIR}/drD1
-     parallel -j ${jobs} < ${LOGDIR}/drD2
-  fi
-
   # Sort maps
   echo ""
   echo "Sorting maps"
@@ -741,11 +711,47 @@ EOF
   # ID_drE=`${FSLDIR}/bin/fsl_sub -j $ID_drC -T 60 -N randomise -l $LOGDIR -t ${LOGDIR}/drE`
   parallel -j ${jobs} < ${LOGDIR}/drE
 
-  # remove core dump files
-  core_dump=( $(ls ${cwd}/core.*) )
-  if [[ ${#core_dump[@]} -gt 0 ]]; then
-    rm ${core_dump[@]}
-  fi
+  # Implement mixture modeling on CIFTI files or NIFTI-1 files (does not work at the moment)
+  # if [ ${NAF2} -eq 1 ] ; then
+  #    echo "Doing thresholded dual regression"
+  #    echo "1" > ${OUTPUT}/tmp.txt
+  #    j=0
+  #    for i in ${INPUTS[@]}; do
+  #       s=subject$(${FSLDIR}/bin/zeropad ${j} 5)
+  #       echo "${FSLDIR}/bin/melodic -i ${OUTPUT}/dr_stage2_${s} --ICs=${OUTPUT}/dr_stage2_${s} --mix=${OUTPUT}/tmp.txt -o ${OUTPUT}/MM_${s} --Oall --report -v --mmthresh=0" >> ${LOGDIR}/drD1
+  #       echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/MM_${s}/stats/thresh2 \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat?.* ${OUTPUT}/MM_${s}/stats/thresh_zstat??.* ${OUTPUT}/MM_${s}/stats/thresh_zstat???.*\` ; sleep 10 ; \
+  #       ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_${s}/stats/thresh_zstat*.*\` ; \
+  #       cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_negative.nii.gz ; \
+  #       cp ${OUTPUT}/MM_${s}/stats/thresh2.nii.gz ${OUTPUT}/MM_${s}/stats/thresh2_positive.nii.gz ; \
+  #       ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -uthr -2 ${OUTPUT}/MM_${s}/stats/thresh2_negative ; \
+  #       ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_positive -thr 2 ${OUTPUT}/MM_${s}/stats/thresh2_positive ; \
+  #       ${FSLDIR}/bin/fslmaths ${OUTPUT}/MM_${s}/stats/thresh2_negative -add ${OUTPUT}/MM_${s}/stats/thresh2_positive ${OUTPUT}/MM_${s}/stats/thresh2 ; \
+  #             ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/MM_{s}/stats/thresh2_*.*\` ; \
+  #       ${FSLDIR}/bin/fsl_glm -i ${i} -d ${OUTPUT}/MM_${s}/stats/thresh2 -o ${OUTPUT}/dr_stage4_${s}.txt --demean -m ${OUTPUT}/mask" >> ${LOGDIR}/drD2
+  #       j=`echo "${j} 1 + p" | dc -`
+  #    done
+  #    # ID_drD1=`${FSLDIR}/bin/fsl_sub -j ${i}D_drC -N mixture_model -l $LOGDIR -t ${LOGDIR}/drD1`
+  #    # ID_drD2=`${FSLDIR}/bin/fsl_sub -j ${i}D_drD1 -N thresholdedDR -l $LOGDIR -t ${LOGDIR}/drD2`
+  #    parallel -j ${jobs} < ${LOGDIR}/drD1
+  #    parallel -j ${jobs} < ${LOGDIR}/drD2
+  # fi
+  # 
+  # # Sort maps
+  # echo ""
+  # echo "Sorting maps"
+  # 
+  # j=0
+  # Nics=$(${FSLDIR}/bin/fslnvols ${ICA_MAPS})
+  # while [ ${j} -lt ${Nics} ] ; do
+  #   jj=$(${FSLDIR}/bin/zeropad ${j} 4)
+  # 
+  #   echo "${FSLDIR}/bin/fslmerge -t ${OUTPUT}/dr_stage2_ic${jj} \`${FSLDIR}/bin/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` ; \
+  #         ${FSLDIR}/bin/imrm \`${FSLDIR}/bin/imglob ${OUTPUT}/dr_stage2_subject*_ic${jj}.*\` " >> ${LOGDIR}/drE
+  #   j=$(echo "${j} 1 + p" | dc -)
+  # done
+  # # ID_drE=`${FSLDIR}/bin/fsl_sub -j $ID_drC -T 60 -N randomise -l $LOGDIR -t ${LOGDIR}/drE`
+  # parallel -j ${jobs} < ${LOGDIR}/drE
+
 fi
 
 #
@@ -762,13 +768,13 @@ if [[ ${#dr_cii[@]} -eq 0 ]] && [[ ! -f ${OUTPUT}/ic_maps.dscalar.nii ]]; then
     printf "wb_command -cifti-convert -from-nifti ${file} ${ICA_MAPS_CIFTI} $(remove_ext ${file}).dscalar.nii -reset-scalars\n" >> ${LOGDIR}/dr.ciftiC 
   done
 
-  if [[ ${convert_all} = "true" ]]; then
-    mm_subs=( $(cd ${OUTPUT}; ls $(pwd)/*MM_*/stats/*.nii*) )
-
-    for file in ${mm_subs[@]}; do
-      printf "wb_command -cifti-convert -from-nifti ${file} ${ICA_MAPS_CIFTI} $(remove_ext ${file}).dscalar.nii -reset-scalars\n" >> ${LOGDIR}/dr.ciftiC 
-    done
-  fi
+  # if [[ ${convert_all} = "true" ]]; then
+  #   mm_subs=( $(cd ${OUTPUT}; ls $(pwd)/*MM_*/stats/*.nii*) )
+  # 
+  #   for file in ${mm_subs[@]}; do
+  #     printf "wb_command -cifti-convert -from-nifti ${file} ${ICA_MAPS_CIFTI} $(remove_ext ${file}).dscalar.nii -reset-scalars\n" >> ${LOGDIR}/dr.ciftiC 
+  #   done
+  # fi
 
   # Convert dual regression stage 2 outputs to cifti
   parallel -j ${jobs} < ${LOGDIR}/dr.ciftiC
@@ -836,9 +842,9 @@ if [[ ${log_p} = "true" ]]; then
   palm_cmds+="-logp "
 fi
 
-if [[ ${twotail} = "true" ]] && [[ ${one_sample} = "false" ]]; then
-  palm_cmds+="-twotail "
-fi
+# if [[ ${twotail} = "true" ]] && [[ ${one_sample} = "false" ]]; then
+#   palm_cmds+="-twotail "
+# fi
 
 if [[ ${demean} = "true" ]]; then
   palm_cmds+="-demean "
@@ -1142,29 +1148,29 @@ fi
 for ((i = 0; i < ${#tstats[@]}; i++)); do
   # All stats arrays are assumed to have equal length -
   # otherwise this does not work as expected
-  wb_command -add-to-spec-file ${tstat_spec} OTHER ${tstats[$i]}
   wb_command -add-to-spec-file ${tstat_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+  wb_command -add-to-spec-file ${tstat_spec} OTHER ${tstats[$i]}
   wb_command -add-to-spec-file ${tstat_spec} OTHER ${vol_file}
   scale_palette --file ${tstats[$i]} --min ${min_thresh} --max ${max_thresh}
 
   # Check if spec file exists - write stat images to them
   if [[ -f ${uncps_spec} ]]; then
-    wb_command -add-to-spec-file ${uncps_spec} OTHER ${uncps[$i]} 
     wb_command -add-to-spec-file ${uncps_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+    wb_command -add-to-spec-file ${uncps_spec} OTHER ${uncps[$i]} 
     wb_command -add-to-spec-file ${uncps_spec} OTHER ${vol_file}
     scale_palette --file ${uncps[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
 
   if [[ -f ${fwes_spec} ]]; then
-    wb_command -add-to-spec-file ${fwes_spec} OTHER ${fwes[$i]}
     wb_command -add-to-spec-file ${fwes_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+    wb_command -add-to-spec-file ${fwes_spec} OTHER ${fwes[$i]}
     wb_command -add-to-spec-file ${fwes_spec} OTHER ${vol_file}
     scale_palette --file ${fwes[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
 
   if [[ -f ${fdrs_spec} ]]; then
-    wb_command -add-to-spec-file ${fdrs_spec} OTHER ${fdrs[$i]}
     wb_command -add-to-spec-file ${fdrs_spec} OTHER ${OUTPUT}/ic_maps.dscalar.nii
+    wb_command -add-to-spec-file ${fdrs_spec} OTHER ${fdrs[$i]}
     wb_command -add-to-spec-file ${fdrs_spec} OTHER ${vol_file}
     scale_palette --file ${fdrs[$i]} --min ${min_thresh} --max ${max_thresh}
   fi
