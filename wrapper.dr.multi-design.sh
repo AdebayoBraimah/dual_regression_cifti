@@ -37,8 +37,15 @@ design_names=( sct_child_covs
   sct_adhd_parent_covs
   sct_adhd_teacher_covs )
 
-i=0 # counter
-for design_name in ${design_names[@]}; do
+# i=0 # counter
+# for design_name in ${design_names[@]}; do
+loop_count=1; parallel_jobs=3
+for (( i=4; i < ${#design_names[@]}; i++ )); do
+
+  design_name=${design_names[$i]}
+
+  echo ""
+  echo "Processing design: ${design_name}"
 
   # Set counter variable
   ii=$(${FSLDIR}/bin/zeropad ${i} 2)
@@ -114,12 +121,26 @@ for design_name in ${design_names[@]}; do
   done
   
   # Run 3 at a time to avoid excessive number of pending status jobs
-  if [[ ${i} -gt 3 ]]; then
+
+  # if [[ ${i} -gt 3 ]]; then
+  #   j=$(echo "${i} 1 - p" | dc -)
+  #   jj=$(${FSLDIR}/bin/zeropad ${j} 2)
+  #   job_wait="-w \"DR_agg.${jj}\""
+  # else
+  #   job_wait=""
+  # fi
+
+  if [[ ${loop_count} -eq 0 ]]; then
+    job_wait="job_run"
+  fi
+  loop_count=$(python -c "print(${loop_count}+1)")
+  if [[ ${loop_count} -ge $((${parallel_jobs}+1)) ]]; then
     j=$(echo "${i} 1 - p" | dc -)
     jj=$(${FSLDIR}/bin/zeropad ${j} 2)
     job_wait="-w \"DR_agg.${jj}\""
-  else
-    job_wait=""
+    loop_count=1
+  elif [[ ${loop_count} -lt $((${parallel_jobs}+1)) ]]; then
+    job_wait=${job_wait}
   fi
   
   # Perform dual regression
@@ -135,5 +156,5 @@ for design_name in ${design_names[@]}; do
   # Copy inclusion/exclusion files to scripts+log directory in output dual_regression_cifti directory
   bsub ${job_wait} -J cp.data.${ii} "sleep 30; cp ${exc_list} ${out_dir_agg}/scripts+logs; cp ${inc_list} ${out_dir_agg}/scripts+logs"
 
-  i=$(echo "${i} 1 + p" | dc -)
+  # i=$(echo "${i} 1 + p" | dc -)
 done
