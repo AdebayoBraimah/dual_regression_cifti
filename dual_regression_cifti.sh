@@ -455,7 +455,7 @@ fi
 # Ambiguous logic here - not entirely sure what is going on here.
 # These options should just be separate cli flags
 if [[ ! -z ${precis} ]]; then
-  if [[ ${precis,,} != "single" ]] || [[ ${precis,,} != "double" ]]; then
+  if [[ ${precis,,} != "single" ]] && [[ ${precis,,} != "double" ]]; then
     echo_red "PALM Input Error: Invalid precision option - valid options include: 'single' or 'double'. Exiting..."
   fi
 fi

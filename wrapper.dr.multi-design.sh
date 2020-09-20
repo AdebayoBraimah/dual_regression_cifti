@@ -21,26 +21,55 @@ scripts_dir=$(dirname $(realpath ${0}))
 hcp_dir=/scratch/brac4g/CAP/BIDS/derivatives/ciftify
 atlas_dir=/scratch/brac4g/CAP/BIDS/scripts/cifti_recon/cifti.atlases/HCP_S1200_GroupAvg_v1
 
-design_names=( sct_child_covs
+# # 04 Sep 2020 Analysis
+# design_names=( sct_child_covs
+#   sct_parent_covs
+#   sct_teacher_covs 
+#   sct_child_parent_adhd_covs 
+#   sct_cci-2_parent_adhd_covs
+#   sct_cci-2_covs
+#   design_sct_no_covs
+#   sct_adhd_parent_no_covs
+#   sct_adhd_teacher_no_covs
+#   sct_child_no_covs
+#   sct_parent_no_covs
+#   sct_teacher_no_covs
+#   design_sct_covs
+#   sct_adhd_parent_covs
+#   sct_adhd_teacher_covs )
+
+# 16 Sep 2020 Analysis
+design_names=( sct_parent_CABI_no_covs
+sct_teacher_CABI_no_covs
+sct_parent_CABI_covs
+sct_teacher_CABI_covs
+sct_parent_CABI_adhd_covs
+sct_teacher_CABI_adhd_covs )
+
+design_names=( sct_adhd_parent_no_covs
+  sct_adhd_teacher_no_covs
+  sct_child_no_covs
+  sct_parent_no_covs
+  sct_teacher_no_covs
+  sct_adhd_parent_covs
+  sct_adhd_teacher_covs
+  sct_child_covs
   sct_parent_covs
   sct_teacher_covs 
   sct_child_parent_adhd_covs 
   sct_cci-2_parent_adhd_covs
   sct_cci-2_covs
-  design_sct_no_covs
-  sct_adhd_parent_no_covs
-  sct_adhd_teacher_no_covs
-  sct_child_no_covs
-  sct_parent_no_covs
-  sct_teacher_no_covs
-  design_sct_covs
-  sct_adhd_parent_covs
-  sct_adhd_teacher_covs )
+  sct_parent_CABI_no_covs
+  sct_teacher_CABI_no_covs
+  sct_parent_CABI_covs
+  sct_teacher_CABI_covs
+  sct_parent_CABI_adhd_covs
+  sct_teacher_CABI_adhd_covs )
 
 # i=0 # counter
 # for design_name in ${design_names[@]}; do
-loop_count=1; parallel_jobs=3
-for (( i=4; i < ${#design_names[@]}; i++ )); do
+loop_count=0; parallel_jobs=3
+for (( i=0; i < ${#design_names[@]}; i++ )); do
 
   design_name=${design_names[$i]}
 
@@ -61,7 +90,7 @@ for (( i=4; i < ${#design_names[@]}; i++ )); do
   
   agg_dir=/scratch/brac4g/CAP/BIDS/derivatives/cifti.analysis/REST_agg.analysis
   
-  out_dir_agg=${agg_dir}/seed-to-voxel.analysis.04_Sep_2020/${design_name}
+  out_dir_agg=${agg_dir}/seed-to-voxel.analysis.21_Sep_2020/${design_name}
   
   # Input variables
   echo ""
@@ -87,7 +116,12 @@ for (( i=4; i < ${#design_names[@]}; i++ )); do
   if [[ ! -d ${agg_dir} ]]; then
     mkdir -p ${agg_dir}
   fi
-  
+
+  if [[ -d ${out_dir_agg} ]]; then
+    rm -rf ${out_dir_agg}
+    # mkdir -p ${out_dir_agg}
+  fi
+
   # files
   sub_list_agg=${agg_dir}/subs_list_preproc-agg.${design_name}.txt
   L_s_list=${agg_dir}/subs_surf_L_list.${design_name}.txt
@@ -131,7 +165,7 @@ for (( i=4; i < ${#design_names[@]}; i++ )); do
   # fi
 
   if [[ ${loop_count} -eq 0 ]]; then
-    job_wait="job_run"
+    job_wait=""
   fi
   loop_count=$(python -c "print(${loop_count}+1)")
   if [[ ${loop_count} -ge $((${parallel_jobs}+1)) ]]; then
